@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Standup Wheel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: #fff;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+            font-size: 2rem;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .container {
+            display: flex;
+            gap: 40px;
+            align-items: flex-start;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .wheel-container {
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .pointer {
+            width: 0;
+            height: 0;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 40px solid #fff;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+            z-index: 10;
+            margin-bottom: -10px;
+        }
+
+        canvas {
+            filter: drop-shadow(0 4px 20px rgba(0,0,0,0.4));
+        }
+
+        #spinBtn {
+            margin-top: 20px;
+            padding: 15px 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        #spinBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        #spinBtn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .controls {
+            background: rgba(255,255,255,0.1);
+            padding: 25px;
+            border-radius: 15px;
+            min-width: 280px;
+            backdrop-filter: blur(10px);
+        }
+
+        .controls h2 {
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+        }
+
+        .add-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .add-form input {
+            flex: 1;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: rgba(255,255,255,0.9);
+            color: #333;
+        }
+
+        .add-form button {
+            padding: 10px 20px;
+            background: #4ECDC4;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .add-form button:hover {
+            background: #45b7aa;
+        }
+
+        .participants-list {
+            list-style: none;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .participants-list li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 15px;
+            background: rgba(255,255,255,0.1);
+            margin-bottom: 8px;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .participants-list li:hover {
+            background: rgba(255,255,255,0.15);
+        }
+
+        .participants-list .remove-btn {
+            background: #FF6B6B;
+            color: white;
+            border: none;
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 1rem;
+            line-height: 1;
+            transition: background 0.2s;
+        }
+
+        .participants-list .remove-btn:hover {
+            background: #e55555;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px 60px;
+            border-radius: 20px;
+            text-align: center;
+            animation: popIn 0.3s ease-out;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        .modal h2 {
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .modal .winner-name {
+            font-size: 2.5rem;
+            font-weight: bold;
+            margin-bottom: 25px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+        }
+
+        .modal button {
+            padding: 12px 40px;
+            font-size: 1.1rem;
+            background: white;
+            color: #764ba2;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s;
+        }
+
+        .modal button:hover {
+            transform: scale(1.05);
+        }
+
+        .empty-message {
+            text-align: center;
+            opacity: 0.7;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Standup Wheel</h1>
+
+    <div class="container">
+        <div class="wheel-container">
+            <div class="pointer"></div>
+            <canvas id="wheel" width="400" height="400"></canvas>
+            <button id="spinBtn">Spin!</button>
+        </div>
+
+        <div class="controls">
+            <h2>Participants</h2>
+            <div class="add-form">
+                <input type="text" id="nameInput" placeholder="Enter name..." />
+                <button id="addBtn">Add</button>
+            </div>
+            <ul class="participants-list" id="participantsList"></ul>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal">
+            <h2>It's your turn!</h2>
+            <div class="winner-name" id="winnerName"></div>
+            <button id="modalOkBtn">OK</button>
+        </div>
+    </div>
+
+    <script>
+        const colors = [
+            '#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4',
+            '#FFEAA7', '#DDA0DD', '#98D8C8', '#F7DC6F',
+            '#BB8FCE', '#85C1E9'
+        ];
+
+        let participants = [];
+        let isSpinning = false;
+        let currentRotation = 0;
+        let lastWinnerIndex = -1;
+
+        const canvas = document.getElementById('wheel');
+        const ctx = canvas.getContext('2d');
+        const spinBtn = document.getElementById('spinBtn');
+        const nameInput = document.getElementById('nameInput');
+        const addBtn = document.getElementById('addBtn');
+        const participantsList = document.getElementById('participantsList');
+        const modalOverlay = document.getElementById('modalOverlay');
+        const winnerName = document.getElementById('winnerName');
+        const modalOkBtn = document.getElementById('modalOkBtn');
+
+        // Initialize from URL parameters
+        function loadFromURL() {
+            const params = new URLSearchParams(window.location.search);
+            const names = params.get('names');
+            if (names) {
+                participants = names.split(',')
+                    .map(n => decodeURIComponent(n.trim()))
+                    .filter(n => n.length > 0);
+            }
+            if (participants.length === 0) {
+                participants = ['Alice', 'Bob', 'Charlie', 'David', 'Eve'];
+            }
+        }
+
+        // Update URL with current participants
+        function updateURL() {
+            const encoded = participants.map(n => encodeURIComponent(n)).join(',');
+            const newURL = `${window.location.pathname}?names=${encoded}`;
+            window.history.replaceState({}, '', newURL);
+        }
+
+        // Draw the wheel
+        function drawWheel() {
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = Math.min(centerX, centerY) - 10;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (participants.length === 0) {
+                ctx.fillStyle = '#444';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.fillStyle = '#fff';
+                ctx.font = '20px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('Add participants', centerX, centerY);
+                return;
+            }
+
+            const sliceAngle = (2 * Math.PI) / participants.length;
+
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(currentRotation);
+
+            participants.forEach((name, i) => {
+                const startAngle = i * sliceAngle;
+                const endAngle = startAngle + sliceAngle;
+
+                // Draw segment
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.arc(0, 0, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = colors[i % colors.length];
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Draw name
+                ctx.save();
+                ctx.rotate(startAngle + sliceAngle / 2);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 14px sans-serif';
+
+                // Truncate long names
+                let displayName = name;
+                if (displayName.length > 12) {
+                    displayName = displayName.substring(0, 11) + '...';
+                }
+
+                ctx.fillText(displayName, radius - 20, 5);
+                ctx.restore();
+            });
+
+            // Draw center circle
+            ctx.beginPath();
+            ctx.arc(0, 0, 20, 0, 2 * Math.PI);
+            ctx.fillStyle = '#fff';
+            ctx.fill();
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // Update participants list UI
+        function updateParticipantsList() {
+            participantsList.innerHTML = '';
+
+            if (participants.length === 0) {
+                participantsList.innerHTML = '<li class="empty-message">No participants yet</li>';
+                return;
+            }
+
+            participants.forEach((name, index) => {
+                const li = document.createElement('li');
+                li.innerHTML = `
+                    <span>${name}</span>
+                    <button class="remove-btn" data-index="${index}">&times;</button>
+                `;
+                participantsList.appendChild(li);
+            });
+        }
+
+        // Add a new participant
+        function addParticipant(name) {
+            name = name.trim();
+            if (name && !participants.includes(name)) {
+                participants.push(name);
+                updateURL();
+                updateParticipantsList();
+                drawWheel();
+            }
+        }
+
+        // Remove a participant
+        function removeParticipant(index) {
+            participants.splice(index, 1);
+            updateURL();
+            updateParticipantsList();
+            drawWheel();
+        }
+
+        // Spin the wheel
+        function spin() {
+            if (isSpinning || participants.length < 1) return;
+
+            isSpinning = true;
+            spinBtn.disabled = true;
+
+            // Random number of full rotations (3-5) plus random final position
+            const fullRotations = 3 + Math.random() * 2;
+            const randomAngle = Math.random() * 2 * Math.PI;
+            const targetRotation = currentRotation + fullRotations * 2 * Math.PI + randomAngle;
+
+            const startRotation = currentRotation;
+            const totalRotation = targetRotation - startRotation;
+            const duration = 4000; // 4 seconds
+            const startTime = performance.now();
+
+            function animate(currentTime) {
+                const elapsed = currentTime - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+
+                // Easing function: ease-out cubic
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+
+                currentRotation = startRotation + totalRotation * easeOut;
+                drawWheel();
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    isSpinning = false;
+                    spinBtn.disabled = false;
+                    announceWinner();
+                }
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        // Determine and announce the winner
+        function announceWinner() {
+            // Normalize rotation to 0-2PI
+            const normalizedRotation = currentRotation % (2 * Math.PI);
+            const sliceAngle = (2 * Math.PI) / participants.length;
+
+            // The pointer is at the top (270 degrees or -PI/2 from standard position)
+            // We need to find which segment is at the top
+            // Since canvas 0 degrees is at 3 o'clock and we rotate clockwise,
+            // we need to calculate which segment the top pointer points to
+            const pointerAngle = (3 * Math.PI / 2 - normalizedRotation + 2 * Math.PI) % (2 * Math.PI);
+            lastWinnerIndex = Math.floor(pointerAngle / sliceAngle) % participants.length;
+
+            winnerName.textContent = participants[lastWinnerIndex];
+            modalOverlay.classList.add('show');
+        }
+
+        // Remove winner and update wheel
+        function removeWinnerAndUpdate() {
+            modalOverlay.classList.remove('show');
+            if (lastWinnerIndex >= 0 && lastWinnerIndex < participants.length) {
+                participants.splice(lastWinnerIndex, 1);
+                lastWinnerIndex = -1;
+                currentRotation = 0; // Reset rotation for clean wheel redraw
+                updateURL();
+                updateParticipantsList();
+                drawWheel();
+            }
+        }
+
+        // Event listeners
+        spinBtn.addEventListener('click', spin);
+        canvas.addEventListener('click', spin);
+        canvas.style.cursor = 'pointer';
+
+        addBtn.addEventListener('click', () => {
+            addParticipant(nameInput.value);
+            nameInput.value = '';
+            nameInput.focus();
+        });
+
+        nameInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                addParticipant(nameInput.value);
+                nameInput.value = '';
+            }
+        });
+
+        participantsList.addEventListener('click', (e) => {
+            if (e.target.classList.contains('remove-btn')) {
+                const index = parseInt(e.target.dataset.index);
+                removeParticipant(index);
+            }
+        });
+
+        modalOkBtn.addEventListener('click', removeWinnerAndUpdate);
+
+        modalOverlay.addEventListener('click', (e) => {
+            if (e.target === modalOverlay) {
+                removeWinnerAndUpdate();
+            }
+        });
+
+        // Initialize
+        loadFromURL();
+        updateParticipantsList();
+        drawWheel();
+    </script>
+</body>
+</html>
